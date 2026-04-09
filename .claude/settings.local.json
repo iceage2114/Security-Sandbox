@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python -c \"from malware_summarizer.core.schemas import MalwareBehavior, ThreatProfile; from malware_summarizer.parsers.malwarebazaar import MalwareBazaarParser; from malware_summarizer.parsers.hybridanalysis import HybridAnalysisParser; from malware_summarizer.parsers.base import SandboxAPIError; print\\('All imports OK'\\)\")",
+      "Bash(python -m pytest tests/test_malware_parsers.py tests/test_malware_agent.py -v)"
+    ]
+  }
+}

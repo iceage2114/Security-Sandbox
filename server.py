@@ -134,5 +134,82 @@ async def get_attack_technique(technique_id: str) -> str:
     return str(result)
 
 
+@mcp.tool()
+async def summarize_malware(hash: str, source: str = "full") -> str:
+    """Fetch public malware sandbox data and generate an AI-powered threat profile report.
+
+    Queries MalwareBazaar and/or Hybrid Analysis for an existing sandbox report,
+    then uses GPT-4o to produce a structured Markdown threat profile with behavior
+    summary, MITRE ATT&CK mapping, IoCs, risk score, and remediation steps.
+
+    Requires GITHUB_TOKEN and MALWAREBAZAAR_API_KEY in the environment.
+    Set HYBRID_ANALYSIS_API_KEY and USE_JOE_SANDBOX=true for full behavioral data.
+
+    Args:
+        hash: SHA-256 hash of the malware sample
+        source: Data source — "bazaar" (MalwareBazaar metadata only),
+                "hybrid" (Hybrid Analysis behavioral data only),
+                or "full" (both sources merged, recommended)
+    """
+    import asyncio
+    from malware_summarizer.core.pipeline import run_pipeline
+    from malware_summarizer.parsers.base import SandboxAPIError
+
+    try:
+        report_path = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: run_pipeline(source=source, identifier=hash)
+        )
+        return report_path.read_text(encoding="utf-8")
+    except SandboxAPIError as exc:
+        return f"Sandbox API error: {exc}"
+    except ValueError as exc:
+        return f"Invalid input: {exc}"
+    except Exception as exc:
+        return f"Error: {exc}"
+
+
+@mcp.tool()
+async def search_malware_samples(tag: str, limit: int = 10) -> str:
+    """Search MalwareBazaar for malware samples matching a family tag.
+
+    Returns a table of matching samples including SHA-256 hashes, file names,
+    malware family signatures, and first-seen dates.
+
+    Requires MALWAREBAZAAR_API_KEY in the environment.
+
+    Args:
+        tag: Malware family tag to search for (e.g. "emotet", "ransomware", "cobalt-strike")
+        limit: Maximum number of results to return (1-100, default 10)
+    """
+    import asyncio
+    from malware_summarizer.parsers.malwarebazaar import MalwareBazaarParser
+    from malware_summarizer.parsers.base import SandboxAPIError
+
+    try:
+        parser = MalwareBazaarParser()
+        raw = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: parser.fetch_by_tag(tag, limit=limit)
+        )
+        results = parser.parse_tag_search(raw)
+    except SandboxAPIError as exc:
+        return f"MalwareBazaar API error: {exc}"
+    except Exception as exc:
+        return f"Error: {exc}"
+
+    if not results:
+        return f"No samples found for tag: {tag}"
+
+    lines = [f"MalwareBazaar results for tag: {tag}", "=" * 50]
+    for r in results:
+        lines.append(f"\nHash:       {r.sample_hash}")
+        lines.append(f"File:       {r.file_name or 'Unknown'}")
+        lines.append(f"Type:       {r.file_type or 'Unknown'}")
+        lines.append(f"First Seen: {r.first_seen or 'Unknown'}")
+        sigs = r.raw_signatures[:3] or r.tags[:3]
+        if sigs:
+            lines.append(f"Signatures: {', '.join(sigs)}")
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
     mcp.run(transport="sse")

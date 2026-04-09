@@ -36,6 +36,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # --- Python application ---
 COPY server.py ./
 COPY tools/ ./tools/
+COPY malware_summarizer/ ./malware_summarizer/
 
 # --- Node.js API server ---
 COPY frontend/package*.json ./frontend/
