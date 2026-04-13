@@ -56,19 +56,21 @@ python server.py
 {
   "mcpServers": {
     "threat-intel": {
-      "url": "http://127.0.0.1:8000/sse"
+      "url": "http://127.0.0.1:8000/mcp"
     }
   }
 }
 ```
 
-API keys are read from `.env` automatically. Restart Claude Desktop after saving.
+API keys are read from `.env` automatically.
+
+> **Important:** Claude Desktop only reads `claude_desktop_config.json` on launch. After saving the config, fully quit and restart Claude Desktop — changes do not take effect while it is running.
 
 ---
 
 ## MCP Inspector
 
-The server runs over HTTP (SSE) on port 8000. Start it first, then connect the inspector.
+The server runs over HTTP (Streamable HTTP) on port 8000. Start it first, then connect the inspector.
 
 **1. Start the server:**
 ```powershell
@@ -80,7 +82,7 @@ python server.py
 npx @modelcontextprotocol/inspector
 ```
 
-Open **http://localhost:5173**, set transport to **SSE**, and enter the URL `http://127.0.0.1:8000/sse`.
+Open **http://localhost:5173**, set transport to **Streamable HTTP**, and enter the URL `http://127.0.0.1:8000/mcp`.
 
 ---
 
@@ -120,9 +122,9 @@ FastMCP generates the JSON schema automatically from the signature and docstring
 
 ## Troubleshooting
 
-**JSON-RPC / EOF errors** — Don't run `python server.py` directly. Use `mcp dev server.py` or Claude Desktop.
+**JSON-RPC / EOF errors** — This server uses HTTP transport. Run `python server.py` directly to start it; `mcp dev` is not required and is only needed for stdio-based servers.
 
-**API key not found** — Ensure `.env` exists in the project root with correctly named variables.
+**API key not found** — Ensure `.env` exists in the project root (copy from `.env.example`). At startup, the server prints a warning listing any unset keys and which tools they affect.
 
 **Rate limit errors** — Wait before retrying, or upgrade to a paid API tier.
 

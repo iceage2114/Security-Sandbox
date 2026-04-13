@@ -7,10 +7,33 @@ Integrates with NVD, VirusTotal, AbuseIPDB, Shodan, and MITRE ATT&CK.
 Built with FastMCP for a clean, decorator-based tool registration API.
 """
 
+import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
 load_dotenv()
+
+# Warn about missing .env or unset API keys at startup so failures are obvious
+_ENV_FILE = Path(__file__).parent / ".env"
+if not _ENV_FILE.exists():
+    print(
+        "WARNING: .env file not found. API keys will not be loaded.\n"
+        "Copy .env.example to .env and fill in your keys."
+    )
+
+_OPTIONAL_KEYS = {
+    "VIRUSTOTAL_API_KEY": "search_ioc",
+    "ABUSEIPDB_API_KEY": "check_ip_reputation",
+    "SHODAN_API_KEY": "enrich_ip",
+    "MALWAREBAZAAR_API_KEY": "summarize_malware / search_malware_samples",
+    "GITHUB_TOKEN": "summarize_malware (GPT-4o via GitHub Models)",
+}
+_missing = [f"  {k} (used by: {v})" for k, v in _OPTIONAL_KEYS.items() if not os.getenv(k)]
+if _missing:
+    print("WARNING: The following API keys are not set — affected tools will return errors:")
+    print("\n".join(_missing))
 
 from tools.nvd import lookup_cve as _lookup_cve, search_nvd as _search_nvd
 from tools.virustotal import search_ioc as _search_ioc
@@ -19,7 +42,7 @@ from tools.shodan import enrich_ip as _enrich_ip
 from tools.mitre import get_attack_technique as _get_attack_technique
 
 # Initialize FastMCP server
-mcp = FastMCP("threat-intel-mcp", host="127.0.0.1", port=8000)
+mcp = FastMCP("threat-intel-mcp", host="127.0.0.1", port=8000, stateless_http=True)
 
 
 @mcp.tool()
@@ -212,4 +235,5 @@ async def search_malware_samples(tag: str, limit: int = 10) -> str:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="sse")
+    transport = os.getenv("MCP_TRANSPORT", "streamable-http")
+    mcp.run(transport=transport)
