@@ -179,7 +179,7 @@ async def summarize_malware(hash: str, source: str = "full") -> str:
     from malware_summarizer.parsers.base import SandboxAPIError
 
     try:
-        report_path = await asyncio.get_event_loop().run_in_executor(
+        report_path = await asyncio.get_running_loop().run_in_executor(
             None, lambda: run_pipeline(source=source, identifier=hash)
         )
         return report_path.read_text(encoding="utf-8")
@@ -210,7 +210,7 @@ async def search_malware_samples(tag: str, limit: int = 10) -> str:
 
     try:
         parser = MalwareBazaarParser()
-        raw = await asyncio.get_event_loop().run_in_executor(
+        raw = await asyncio.get_running_loop().run_in_executor(
             None, lambda: parser.fetch_by_tag(tag, limit=limit)
         )
         results = parser.parse_tag_search(raw)
